@@ -13,6 +13,16 @@ const Icons = {
   <path d="M6 3C4.89543 3 4 3.89543 4 5V19C4 20.1046 4.89543 21 6 21H9C10.1046 21 11 20.1046 11 19V5C11 3.89543 10.1046 3 9 3H6Z" fill="currentColor"/>
   <path d="M15 3C13.8954 3 13 3.89543 13 5V19C13 20.1046 13.8954 21 15 21H18C19.1046 21 20 20.1046 20 19V5C20 3.89543 19.1046 3 18 3H15Z" fill="currentColor"/>
   </svg>`,
+  replay10: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M8 7H4V3" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M4 7C5.3 5.1 7.5 4 10 4C13.9 4 17 7.1 17 11C17 14.9 13.9 18 10 18C6.8 18 4.1 15.9 3.3 13" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/>
+  <text x="10" y="14.4" text-anchor="middle" font-size="7" font-family="Segoe UI, Arial, sans-serif" font-weight="700" fill="currentColor">10</text>
+  </svg>`,
+  forward10: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M16 7H20V3" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M20 7C18.7 5.1 16.5 4 14 4C10.1 4 7 7.1 7 11C7 14.9 10.1 18 14 18C17.2 18 19.9 15.9 20.7 13" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/>
+  <text x="14" y="14.4" text-anchor="middle" font-size="7" font-family="Segoe UI, Arial, sans-serif" font-weight="700" fill="currentColor">10</text>
+  </svg>`,
   muted: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
   <path d="M12.1657 2.14424C12.8728 2.50021 13 3.27314 13 3.7446V20.2561C13 20.7286 12.8717 21.4998 12.1656 21.8554C11.416 22.2331 10.7175 21.8081 10.3623 21.4891L4.95001 16.6248H3.00001C1.89544 16.6248 1.00001 15.7293 1.00001 14.6248L1 9.43717C1 8.3326 1.89543 7.43717 3 7.43717H4.94661L10.3623 2.51158C10.7163 2.19354 11.4151 1.76635 12.1657 2.14424Z" fill="currentColor"/>
   <path d="M21.8232 15.6767C21.4327 16.0673 20.7995 16.0673 20.409 15.6768L18.5 13.7678L16.591 15.6768C16.2005 16.0673 15.5673 16.0673 15.1768 15.6767L14.8233 15.3232C14.4327 14.9327 14.4327 14.2995 14.8233 13.909L16.7322 12L14.8232 10.091C14.4327 9.70044 14.4327 9.06727 14.8232 8.67675L15.1767 8.3232C15.5673 7.93267 16.2004 7.93267 16.591 8.32319L18.5 10.2322L20.409 8.32319C20.7996 7.93267 21.4327 7.93267 21.8233 8.3232L22.1768 8.67675C22.5673 9.06727 22.5673 9.70044 22.1768 10.091L20.2678 12L22.1767 13.909C22.5673 14.2995 22.5673 14.9327 22.1767 15.3232L21.8232 15.6767Z" fill="currentColor"/>
