@@ -138,6 +138,9 @@ async function init(tab) {
   };
 }
 
+// Firefox tab metadata reports whether audio is currently audible to the user.
+const isAudibleTab = (tab) => tab?.audible === true;
+
 // Starts tracking one tab and wires page scripts/state into popup UI.
 async function register(tid) {
   // Start tracking a tab, inject page scripts, then populate initial media state.
