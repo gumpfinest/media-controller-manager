@@ -1,5 +1,27 @@
-// Stores tracked audible tabs and their latest known media state.
+// Stores tracked media tabs and their latest known media state.
 window.__tabs__ = new Map();
+// Remembers recently navigated-away tracked tabs so paused media can re-register.
+window.__pendingNavigationTimers__ = new Map();
+
+function clearPendingNavigation(tid) {
+  const timer = window.__pendingNavigationTimers__.get(tid);
+  if (timer !== undefined) {
+    clearTimeout(timer);
+    window.__pendingNavigationTimers__.delete(tid);
+  }
+}
+
+function markPendingNavigation(tid, ttlMs = 15000) {
+  clearPendingNavigation(tid);
+  const timer = setTimeout(() => {
+    window.__pendingNavigationTimers__.delete(tid);
+  }, ttlMs);
+  window.__pendingNavigationTimers__.set(tid, timer);
+}
+
+function hasPendingNavigation(tid) {
+  return window.__pendingNavigationTimers__.has(tid);
+}
 
 // Tries to inject probe scripts into one tab; restricted pages are skipped silently.
 async function injectProbeScript(tid) {
@@ -164,6 +186,8 @@ async function register(tid) {
     return;
   }
 
+  clearPendingNavigation(tid);
+
   const tab = await init(tid);
   window.__tabs__.set(tid, tab);
   await browser.browserAction.enable();
@@ -206,7 +230,7 @@ async function unregister(tid) {
   }
 }
 
-// Toolbar starts disabled until at least one audible tab is tracked.
+// Toolbar starts disabled until at least one media tab is tracked.
 browser.browserAction.disable();
 browser.browserAction.setBadgeTextColor({ color: "white" });
 browser.browserAction.setBadgeBackgroundColor({ color: "gray" });
@@ -223,11 +247,6 @@ browser.tabs.onUpdated.addListener(
   async (tid, { audible }) => {
     if (audible === true) {
       await injectProbeScript(tid);
-      return;
-    }
-
-    if (audible === false && window.__tabs__.has(tid)) {
-      await unregister(tid);
     }
   },
   { properties: ["audible"] }
@@ -237,6 +256,7 @@ browser.tabs.onUpdated.addListener(
 browser.tabs.onUpdated.addListener(
   async (tid, changeInfo) => {
     if (changeInfo.status === "loading" && window.__tabs__.has(tid)) {
+      markPendingNavigation(tid);
       await unregister(tid);
     }
 
@@ -262,6 +282,7 @@ browser.tabs.onUpdated.addListener(
 browser.tabs.onUpdated.addListener(
   async (tid, { discarded }) => {
     if (discarded && window.__tabs__.has(tid)) {
+      clearPendingNavigation(tid);
       await unregister(tid);
     }
   },
@@ -270,6 +291,7 @@ browser.tabs.onUpdated.addListener(
 
 // Remove tracking when tab closes.
 browser.tabs.onRemoved.addListener(async (tid) => {
+  clearPendingNavigation(tid);
   if (window.__tabs__.has(tid)) {
     await unregister(tid);
   }
@@ -286,7 +308,7 @@ browser.runtime.onMessage.addListener(async (message, sender) => {
 
   if (message.type === "@hook" && !window.__tabs__.has(tid)) {
     const tabInfo = await browser.tabs.get(tid);
-    if (tabInfo.audible) {
+    if (tabInfo.audible || hasPendingNavigation(tid)) {
       await register(tid);
     } else {
       return;
