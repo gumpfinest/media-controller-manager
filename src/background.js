@@ -1,6 +1,24 @@
 // Stores tracked audible tabs and their latest known media state.
 window.__tabs__ = new Map();
 
+// Tries to inject probe scripts into one tab; restricted pages are skipped silently.
+async function injectProbeScript(tid) {
+  try {
+    await browser.tabs.executeScript(tid, {
+      file: "inject.js",
+      allFrames: true,
+      matchAboutBlank: true,
+    });
+  } catch {
+    // Some browser pages/frames (about:, addons, etc.) reject script injection.
+    try {
+      await browser.tabs.executeScript(tid, { file: "inject.js" });
+    } catch {
+      // Skip restricted tabs that cannot host extension scripts.
+    }
+  }
+}
+
 // Calls a named method on every open popup window.
 function applyPopupViews(func, args) {
   // Broadcast a UI update to every currently opened popup instance.
@@ -130,6 +148,7 @@ async function init(tab) {
     id: tab.id,
     wid: tab.windowId,
     media: null,
+    frameId: 0,
     title: tab.title,
     favicon: tab.favIconUrl,
     hostname: url.hostname,
@@ -141,13 +160,17 @@ async function init(tab) {
 // Starts tracking one tab and wires page scripts/state into popup UI.
 async function register(tid) {
   // Start tracking a tab, inject page scripts, then populate initial media state.
+  if (window.__tabs__.has(tid)) {
+    return;
+  }
+
   const tab = await init(tid);
   window.__tabs__.set(tid, tab);
   await browser.browserAction.enable();
   await browser.browserAction.setBadgeText({
     text: String(window.__tabs__.size),
   });
-  await browser.tabs.executeScript(tid, { file: "inject.js" });
+  await injectProbeScript(tid);
 
   const trackedTab = window.__tabs__.get(tid);
   if (trackedTab === undefined) {
@@ -176,7 +199,11 @@ async function unregister(tid) {
   await browser.browserAction.setBadgeText({
     text: size > 0 ? String(size) : null,
   });
-  await browser.tabs.sendMessage(tid, "@unhook");
+  try {
+    await browser.tabs.sendMessage(tid, "@unhook");
+  } catch {
+    // Tab may be gone or have no listener anymore.
+  }
 }
 
 // Toolbar starts disabled until at least one audible tab is tracked.
@@ -184,18 +211,23 @@ browser.browserAction.disable();
 browser.browserAction.setBadgeTextColor({ color: "white" });
 browser.browserAction.setBadgeBackgroundColor({ color: "gray" });
 
-// Restore tracking when background starts and audible tabs already exist.
-browser.tabs.query({ audible: true, status: "complete" }).then(async (tabs) => {
+// Probe existing completed tabs on startup; tabs register themselves via @hook messages.
+browser.tabs.query({ status: "complete" }).then(async (tabs) => {
   for (const { id } of tabs) {
-    await register(id);
+    await injectProbeScript(id);
   }
 });
 
-// Track tabs once they become audible.
+// Probe tabs once they become audible; registration occurs on valid @hook payloads.
 browser.tabs.onUpdated.addListener(
   async (tid, { audible }) => {
-    if (audible && !window.__tabs__.has(tid)) {
-      await register(tid);
+    if (audible === true) {
+      await injectProbeScript(tid);
+      return;
+    }
+
+    if (audible === false && window.__tabs__.has(tid)) {
+      await unregister(tid);
     }
   },
   { properties: ["audible"] }
@@ -203,17 +235,16 @@ browser.tabs.onUpdated.addListener(
 
 // Re-register on navigation so metadata/media references are refreshed.
 browser.tabs.onUpdated.addListener(
-  async (tid) => {
-    if (window.__tabs__.has(tid)) {
+  async (tid, changeInfo) => {
+    if (changeInfo.status === "loading" && window.__tabs__.has(tid)) {
       await unregister(tid);
-      await new Promise((r) => setTimeout(r, 4500));
-      const tab = await browser.tabs.get(tid);
-      if (tab.audible) {
-        await register(tid);
-      }
+    }
+
+    if (changeInfo.status === "complete") {
+      await injectProbeScript(tid);
     }
   },
-  { properties: ["url", "status"] }
+  { properties: ["status"] }
 );
 
 // Keep popup title in sync with tab title changes.
@@ -247,24 +278,46 @@ browser.tabs.onRemoved.addListener(async (tid) => {
 // Handles state updates from content scripts and applies the lightest possible popup refresh.
 browser.runtime.onMessage.addListener(async (message, sender) => {
   // Route page media events into stored state and update popup efficiently.
-  const tid = sender.tab.id;
+  const tid = sender.tab?.id;
+  const frameId = Number.isInteger(sender.frameId) ? sender.frameId : 0;
+  if (typeof tid !== "number") {
+    return;
+  }
+
+  if (message.type === "@hook" && !window.__tabs__.has(tid)) {
+    const tabInfo = await browser.tabs.get(tid);
+    if (tabInfo.audible) {
+      await register(tid);
+    } else {
+      return;
+    }
+  }
+
   const tab = window.__tabs__.get(tid);
   if (tab === undefined) {
     return;
   }
 
   if (message.type === "@hook") {
+    tab.frameId = frameId;
     tab.media = mergeMediaState(tab.media, message.media);
-    await browser.tabs.executeScript(tid, { file: "hook.js" });
+    try {
+      await browser.tabs.executeScript(tid, { file: "hook.js", frameId, matchAboutBlank: true });
+    } catch {
+      // Frame may no longer exist after in-page player navigation.
+    }
     applyPopupViews("update", [tab]);
   } else if (message.type === "play" || message.type === "pause") {
+    tab.frameId = frameId;
     const paused = message.type === "play" ? false : true;
     tab.media = mergeMediaState(tab.media, { ...message, paused });
     applyPopupViews("update", [tab]);
   } else if (message.type === "volumechange") {
+    tab.frameId = frameId;
     tab.media = mergeMediaState(tab.media, message);
     applyPopupViews("syncVolume", [tid, tab.media]);
   } else if (MEDIA_PROGRESS_EVENTS.has(message.type)) {
+    tab.frameId = frameId;
     tab.media = mergeMediaState(tab.media, message);
     applyPopupViews("syncProgress", [tid, tab.media]);
   } else return;

@@ -1,13 +1,24 @@
 // Page-script entry point: tags media nodes and emits hook events for state sync.
 (() => {
+  // Marks exactly one media element as active for extension controls.
+  const setActiveMedia = ($media) => {
+    for (const $tagged of document.querySelectorAll("[mcx-media]")) {
+      if ($tagged !== $media) {
+        $tagged.toggleAttribute("mcx-media", false);
+      }
+    }
+    if ($media.getAttribute("mcx-media") === null) {
+      $media.toggleAttribute("mcx-media", true);
+    }
+  };
+
   // On first load, tag an already-playing media element so controls work immediately.
   if (document.querySelector("[mcx-media]") === null) {
     const $allMedia = Array.from(document.querySelectorAll("video, audio"));
     const $playing = $allMedia.find(($item) => !$item.paused && !$item.ended);
     if ($playing !== undefined) {
-      $playing.toggleAttribute("mcx-media", true);
+      setActiveMedia($playing);
       window.dispatchEvent(new Event("hook"));
-      return;
     }
   }
 
@@ -23,11 +34,11 @@
     // Wrapped method keeps original behavior but adds tagging + hook emission.
     HTMLMediaElement.prototype[method] = function () {
       const value = originalMethod.apply(this, arguments);
-      if (this.getAttribute("mcx-media") === null) {
+      if (this instanceof HTMLMediaElement && !this.ended) {
         if (!document.contains(this) && document.body !== null) {
           document.body.append(this);
         }
-        this.toggleAttribute("mcx-media", true);
+        setActiveMedia(this);
       }
       window.dispatchEvent(new Event("hook"));
       return value;
