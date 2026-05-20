@@ -2,7 +2,7 @@
   "manifest_version": 2,
   "name": "Media Controller Manager",
   "author": "Gumpfinest",
-  "version": "0.2.8",
+  "version": "0.2.9",
   "description": "Control media across tabs.",
   "homepage_url": "https://github.com/gumpfinest/FireFox-Media-Controller",
   "icons": {
