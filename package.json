@@ -1,16 +1,16 @@
 {
-  "name": "media-controller-extension",
-  "version": "0.2.6",
+  "name": "media-controller-manager",
+  "version": "0.2.7",
   "description": "A Firefox browser extension to control media across tabs.",
-  "repository": "github:tnychn/media-controller-extension",
+  "repository": "github:gumpfinest/FireFox-Media-Controller",
   "author": {
-    "name": "Tony Chan",
-    "email": "tnychn@protonmail.com",
-    "url": "https://github.com/tnychn"
+    "name": "Gumpfinest",
+    "email": "dovah03@gmail.com",
+    "url": "https://github.com/gumpfinest"
   },
   "license": "MIT",
   "scripts": {
-    "build": "web-ext build -s ./src -a . -n media-controller.firefox.zip",
+    "build": "web-ext build -s ./src -a . -n media-controller-manager.firefox.zip",
     "start": "web-ext run -s ./src --devtools"
   },
   "prettier": {
